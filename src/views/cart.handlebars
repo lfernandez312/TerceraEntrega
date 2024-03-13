@@ -1,0 +1,139 @@
+<style>
+  .ticket {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  #cartItemsTable {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #cartItemsTable th,
+  #cartItemsTable td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  #cartTotal {
+    font-weight: bold;
+    text-align: right;
+  }
+</style>
+
+<section class="product-section">
+  <br>
+  <center>
+    <h2>Productos en carrito</h2>
+  </center>
+  <div class="container ticket">
+    <table id="cartItemsTable">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Precio Unitario</th>
+          <th>Precio Total</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each cartInfo.products}}
+        <tr>
+          <td>{{this.name}}</td>
+          <td>{{this.quantity}}</td>
+          <td>u$s {{this.price}}</td>
+          <td>u$s {{this.totalPrice}}</td>
+          <td>
+            <button onclick="removeFromCart('{{this.id}}')">Eliminar del carrito</button>
+          </td>
+        </tr>
+        {{/each}}
+        <tr id="cartTotal">
+          <td colspan="3">Total:</td>
+          <td>u$s {{cartInfo.totalPrice}}</td>
+          <td>
+            <button style="background:red" onclick="finishCart()">Finalizar Compra</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination mt-4">
+    {{#if cartInfo.products.hasNextPage}}
+    <a href="?page={{cartInfo.products.nextPage}}&limit={{cartInfo.products.limit}}" class="btn btn-secondary">Next</a>
+    {{/if}}
+    {{#if cartInfo.products.hasPrevPage}}
+    <a href="?page={{cartInfo.products.prevPage}}&limit={{cartInfo.products.limit}}"
+      class="btn btn-secondary">Previous</a>
+    {{/if}}
+  </div>
+</section>
+<script>
+  function removeFromCart(productId) {
+    fetch(`/cart/remove/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(response => response.json())
+      .then(data => {
+        location.reload(); // Recargar la página para actualizar la información del carrito
+      })
+      .catch(error => console.error('Error al eliminar producto del carrito:', error));
+  }
+
+function generateUniqueCode() {
+    const timestamp = new Date().getTime().toString(36).slice(-5);
+    const randomString = Math.random().toString(36).substring(2, 7);
+    return timestamp + randomString;
+}
+
+function finishCart() {
+  try {
+    // Obtén la información del carrito del usuario utilizando la función del controlador
+    fetch(' /cart/info/compra', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Asegúrate de que la respuesta contenga la información del carrito
+      const cartInfo = data.cartInfo;
+
+
+      // Realiza la solicitud POST para finalizar la compra
+      fetch(`/cart/${cartInfo._id}/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cartInfo }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+        location.reload(); // Recargar el carrito a vacio
+      })
+      .catch(error => {
+        console.error('Error al finalizar la compra:', error);
+      });
+    })
+    .catch(error => {
+      console.error('Error al obtener información del carrito:', error);
+    });
+  } catch (error) {
+    console.error('Error general:', error);
+  }
+}
+
+
+</script>
+
